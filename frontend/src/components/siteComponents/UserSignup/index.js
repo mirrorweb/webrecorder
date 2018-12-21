@@ -181,6 +181,7 @@ class UserSignup extends Component {
       checkedUsername,
       errors,
       result,
+      submitting,
       success,
       user,
       userCheck
