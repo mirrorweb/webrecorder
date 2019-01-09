@@ -9,15 +9,16 @@ webarchive_ids:
   - uk_wa
   - pt_wa
   - is_wa
-#  - si_wa
-#  - ee_wa
-#  - sg_wa
-#  - uk_na
-#  - uk_parl
-#  - proni
-#  - eu_wa_coll
-#  - nara
-#  - cat_wa
+  - mw
+  - si_wa
+  - ee_wa
+  - sg_wa
+  - uk_na
+  - uk_parl
+  - proni
+  - eu_wa_coll
+  - nara
+  - cat_wa
   
 
 
