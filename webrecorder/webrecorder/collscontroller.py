@@ -18,8 +18,6 @@ class CollsController(BaseController):
 
         self.allow_external = get_bool(os.environ.get('ALLOW_EXTERNAL', False))
 
-        self.cork = kwargs['cork']
-
     def init_routes(self):
         wr_api_spec.set_curr_tag('Collections')
 
@@ -52,8 +50,8 @@ class CollsController(BaseController):
                 if not self.allow_external:
                     self._raise_error(403, 'external_not_allowed')
 
-                if not is_anon:
-                    self._raise_error(400, 'not_valid_for_external')
+                #if not is_anon:
+                #    self._raise_error(400, 'not_valid_for_external')
 
             elif is_anon:
                 if coll_name != 'temp':
@@ -216,13 +214,8 @@ class CollsController(BaseController):
         def dat_do_share(coll_name):
             user, collection = self.load_user_coll(coll_name=coll_name)
 
-            self.access.assert_can_admin_coll(collection)
-
             # BETA only
-            try:
-                self.cork.require(role='beta-archivist')
-            except:
-                self._raise_error(400, 'not_allowed')
+            self.require_admin_beta_access(collection)
 
             try:
                 data = request.json or {}
@@ -239,13 +232,8 @@ class CollsController(BaseController):
         def dat_do_unshare(coll_name):
             user, collection = self.load_user_coll(coll_name=coll_name)
 
-            self.access.assert_can_admin_coll(collection)
-
             # BETA only
-            try:
-                self.cork.require(role='beta-archivist')
-            except:
-                self._raise_error(400, 'not_allowed')
+            self.require_admin_beta_access(collection)
 
             try:
                 result = DatShare.dat_share.unshare(collection)

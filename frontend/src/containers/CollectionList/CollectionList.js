@@ -2,12 +2,12 @@ import React from 'react';
 import { asyncConnect } from 'redux-connect';
 import { batchActions } from 'redux-batched-actions';
 
-import { addUserCollection, incrementCollCount } from 'redux/modules/auth';
-import { load as loadCollections, createCollection } from 'redux/modules/collections';
+import { addUserCollection, incrementCollCount } from 'store/modules/auth';
+import { load as loadCollections, createCollection } from 'store/modules/collections';
 
-import { edit } from 'redux/modules/collection';
-import { load as loadUser, edit as editUser, resetEditState } from 'redux/modules/user';
-import { sortCollsByAlpha } from 'redux/selectors';
+import { edit } from 'store/modules/collection';
+import { load as loadUser, edit as editUser, resetEditState } from 'store/modules/user';
+import { sortCollsByAlpha } from 'store/selectors';
 
 import CollectionListUI from 'components/collection/CollectionListUI';
 
@@ -47,7 +47,7 @@ const mapDispatchToProps = (dispatch, { history }) => {
               incrementCollCount(1),
               addUserCollection(res.collection)
             ]));
-            history.push(`/${user}/${res.collection.slug}/index`);
+            history.push(`/${user}/${res.collection.slug}/manage`);
           }
         }, () => {});
     },

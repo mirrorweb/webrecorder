@@ -5,15 +5,16 @@ import { Alert } from 'react-bootstrap';
 import WebSocketHandler from 'helpers/ws';
 import { deleteStorage, getStorage, remoteBrowserMod, setStorage } from 'helpers/utils';
 
-import { createRemoteBrowser } from 'redux/modules/remoteBrowsers';
+import { createRemoteBrowser } from 'store/modules/remoteBrowsers';
+
+import { publicIP } from 'config';
 
 import './style.scss';
 
-const CBrowser = __CLIENT__ && require('shepherd-client/lib/browser').default;
+const CBrowser = !__PLAYER__ && __CLIENT__ && require('shepherd-client/lib/browser').default;
 
 
 class RemoteBrowserUI extends Component {
-
   static contextTypes = {
     currMode: PropTypes.string
   };
@@ -58,20 +59,21 @@ class RemoteBrowserUI extends Component {
     this.state = {
       countdownLabel: false,
       dismissCountdown: false,
-      coutdown: '',
       message: '',
       messageSet: false
     };
 
     this.pywbParams = {
-      audio: 1,
+      audio: "wait_for_click",
       static_prefix: '/static/',
       api_prefix: '/api/browsers',
       clipboard: '#clipboard',
       fill_window: true,
       on_countdown: this.onCountdown,
       on_event: this.onEvent,
-      headers: { 'x-requested-with': 'XMLHttpRequest' }
+      headers: { 'x-requested-with': 'XMLHttpRequest' },
+      webrtc: true,
+      webrtcHostIP: publicIP,
     };
   }
 
@@ -96,8 +98,10 @@ class RemoteBrowserUI extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    const { autoscroll, clipboard, dispatch, inactiveTime, contentFrameUpdate,
-            params, rb, rec, reqId, timestamp, url } = this.props;
+    const {
+      autoscroll, clipboard, dispatch, inactiveTime, contentFrameUpdate,
+      params, rb, rec, reqId, timestamp, url
+    } = this.props;
 
     // bidirectional clipboard
     if (clipboard !== prevProps.clipboard && this.cb) {
@@ -246,8 +250,8 @@ class RemoteBrowserUI extends Component {
 
       const collUrl = `/${user}/${coll}/`;
       message = (
-          `Sorry, the remote browser session has expired.<br />
-          You can <a href="${collUrl}index?query=session:${rec}">view the recording</a> or <a href="${collUrl}$new">create a new recording</a>`
+        `Sorry, the remote browser recording session has expired.<br />
+         You can <a href="${collUrl}index?query=session:${rec}">view the recording</a> or <a href="${collUrl}$new">create a new recording</a>`
       );
 
       this.setState({

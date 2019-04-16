@@ -1,4 +1,4 @@
-from bottle import debug, request, response, static_file, redirect
+from bottle import debug, request, response, redirect, BaseRequest
 
 import logging
 import json
@@ -31,6 +31,7 @@ from webrecorder.usercontroller import UserController
 from webrecorder.downloadcontroller import DownloadController
 from webrecorder.uploadcontroller import UploadController
 from webrecorder.appcontroller import AppController
+from webrecorder.autocontroller import AutoController
 
 from webrecorder.browsermanager import BrowserManager
 
@@ -65,6 +66,7 @@ class MainController(BaseController):
                        RecsController,
                        CollsController,
                        ListsController,
+                       AutoController,
                       ]
 
 
@@ -79,6 +81,8 @@ class MainController(BaseController):
             # only launch if running in place, not from installed package
             if '.egg' not in __file__:
                 spawn_once(default_build, worker=1, force_build=False)
+
+        BaseRequest.MEMFILE_MAX = 500000 # 500kb
 
         bottle_app = APIBottle()
         self.bottle_app = bottle_app
@@ -122,7 +126,8 @@ class MainController(BaseController):
                                         user_manager=user_manager,
                                         config=config,
                                         browser_mgr=browser_mgr,
-                                        redis=self.redis)
+                                        redis=self.redis,
+                                        cork=cork)
 
         # Init Sesion temp_prefix
         Session.temp_prefix = config['temp_prefix']
@@ -209,10 +214,10 @@ class MainController(BaseController):
             return self.browser_mgr.get_browsers()
 
         def get_app_host():
-            return self.app_host
+            return self.app_host or 'http://localhost:8089'
 
         def get_content_host():
-            return self.content_host
+            return self.content_host or 'http://localhost:8092'
 
         def get_num_collections():
             count = self.access.session_user.num_total_collections()
@@ -245,7 +250,7 @@ class MainController(BaseController):
 
         @contextfunction
         def is_anon(context):
-            return self.access.is_anon(get_user(context))
+            return self.access.session_user.is_anon()
 
         def get_announce_list():
             announce_list = os.environ.get('ANNOUNCE_MAILING_LIST', False)
@@ -372,10 +377,17 @@ class MainController(BaseController):
 
         @self.bottle_app.route(['/static/<path:path>', '/static_cors/<path:path>'])
         def static_files(path):
-            res = static_file(path, root=self.static_root)
+            filename = path.split('?', 1)[0]
+            filename = os.path.join(self.static_root, filename)
+            if not os.path.isfile(filename):
+                response.status = 404
+                return
+
+            with open(filename, 'rt') as fh:
+                res = fh.read()
 
             if 'HTTP_ORIGIN' in request.environ:
-                self.set_options_headers(None, None, res)
+                self.set_options_headers(None, None)
 
             return res
 
@@ -416,7 +428,7 @@ class MainController(BaseController):
                 return
 
             # return html error view for any content errors
-            if self.is_content_request():
+            if self.is_content_request() or out.status_code == 402 or 'wsgiprox.proxy_host' in request.environ:
                 if self.content_error_redirect:
                     err_context = {'status': out.status_code,
                                    'error': out.body

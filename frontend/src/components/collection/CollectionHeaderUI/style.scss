@@ -98,6 +98,7 @@ header.wr-collection-header {
                 font-size: 2.2rem;
                 font-weight: 400;
                 color: $body-gray;
+                word-break: break-word;
             }
 
             .desc {
@@ -130,6 +131,10 @@ header.wr-collection-header {
 
             .new-session {
                 padding: .7rem 1.2rem;
+            }
+
+            sup {
+                color: green;
             }
 
             & > *:not(:first-child) {

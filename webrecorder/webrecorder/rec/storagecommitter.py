@@ -4,6 +4,9 @@ import redis
 from webrecorder.models.recording import Recording
 from webrecorder.models.base import BaseAccess
 
+import logging
+logger = logging.getLogger('wr.io')
+
 
 # ============================================================================
 class StorageCommitter(object):
@@ -14,8 +17,8 @@ class StorageCommitter(object):
 
         self.all_cdxj_templ = Recording.CDXJ_KEY.format(rec='*')
 
-        print('Storage Committer Started')
-        print('Storage Root: ' + os.environ['STORAGE_ROOT'])
+        logger.info('Storage Committer Started')
+        logger.info('Storage Root: ' + os.environ['STORAGE_ROOT'])
 
     def __call__(self):
         for cdxj_key in self.redis.scan_iter(self.all_cdxj_templ):
@@ -30,13 +33,28 @@ class StorageCommitter(object):
                               redis=self.redis,
                               access=BaseAccess())
 
+        collection = recording.get_owner()
+        if not collection:
+            logger.debug('Deleting Invalid Rec: ' + recording.my_id)
+            recording.delete_object()
+            return
+
+        if collection.is_external():
+            logger.debug('Skipping recording commit for external collection: ' + collection.my_id)
+            return
+
         if not recording.is_open(extend=False):
             recording.commit_to_storage()
 
 
 # =============================================================================
-if __name__ == "__main__":
+def run():
     from webrecorder.rec.worker import Worker
     Worker(StorageCommitter).run()
+
+
+# =============================================================================
+if __name__ == "__main__":
+    run()
 
 

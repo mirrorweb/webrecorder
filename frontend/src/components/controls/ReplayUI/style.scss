@@ -38,10 +38,23 @@
 
     &.embed {
         flex-direction: column;
+
+        iframe {
+            width: 100%;
+        }
     }
 
     .wr-sidebar {
         z-index: 100;
+    }
+
+    // hack for ie, fix flexbox bug where children won't stretch without fixed container height
+    *::-ms-backdrop, iframe {
+        min-height: 100%;
+    }
+
+    .react-tabs__tab-panel {
+        min-height: 0;
     }
 }
 

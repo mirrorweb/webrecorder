@@ -126,7 +126,7 @@
                 if (input && input.form && input.form.action) {
                     var form_action = input.form.action;
 
-                    if (window._wb_wombat) {
+                    if (window._wb_wombat && window._wb_wombat.extract_orig) {
                         form_action = window._wb_wombat.extract_orig(form_action);
                     }
 
@@ -213,7 +213,9 @@
             }
 
             function sendDone() {
-                sendMessage({wb_type: "autoscroll_resp", on: false});
+                sendMessage({"wb_type": "autoscroll_resp",
+                             "on": false,
+                             "url": window.location.href});
             }
 
             if (message.wb_type == "autoscroll") {

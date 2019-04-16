@@ -12,9 +12,9 @@ import './style.scss';
 
 
 class RecordingToolsUI extends PureComponent {
-
   static propTypes = {
     activeBrowser: PropTypes.string,
+    auth: PropTypes.object,
     autoscroll: PropTypes.bool,
     history: PropTypes.object,
     match: PropTypes.object,
@@ -82,11 +82,19 @@ class RecordingToolsUI extends PureComponent {
 
   catalogView = () => {
     const { match: { params: { user, coll } } } = this.props;
-    this.props.history.push(`/${user}/${coll}/index`);
+    this.props.history.push(`/${user}/${coll}/manage`);
   }
 
   toggleAutoscroll = () => {
     this.props.toggleAutoscroll(!this.props.autoscroll);
+  }
+
+  startAuto = () => {
+    apiFetch(`/browser/behavior/start/${this.props.reqId}`, {}, { method: 'POST' });
+  }
+
+  stopAuto = () => {
+    apiFetch(`/browser/behavior/stop/${this.props.reqId}`, {}, { method: 'POST' });
   }
 
   userGuide = () => {
@@ -94,8 +102,11 @@ class RecordingToolsUI extends PureComponent {
   }
 
   openClipboard = () => this.props.toggleClipboard(true)
+
   closeClipboard = () => this.props.toggleClipboard(false)
+
   _open = () => this.setState({ clipboardOpen: true })
+
   _close = () => this.setState({ clipboardOpen: false })
 
   render() {
@@ -105,6 +116,7 @@ class RecordingToolsUI extends PureComponent {
     const isNew = currMode === 'new';
     const isWrite = ['new', 'patch', 'record', 'extract'].includes(currMode);
     const modalFooter = <Button onClick={this._close}>Close</Button>;
+    const newFeatures = canAdmin && ['admin', 'beta-archivist'].includes(this.props.auth.get('role'));
 
     return (
       <div className="recording-actions text-center hidden-xs">
@@ -121,6 +133,16 @@ class RecordingToolsUI extends PureComponent {
         {
           canAdmin && !isNew &&
             <DropdownButton pullRight noCaret id="tool-dropdown" title={<span className="glyphicon glyphicon-option-vertical" aria-hidden="true" />}>
+
+              {
+                newFeatures &&
+                  <React.Fragment>
+                    <MenuItem onClick={this.startAuto}>Start Automation</MenuItem>
+                    <MenuItem onClick={this.stopAuto}>Stop Automation</MenuItem>
+                    <MenuItem divider />
+                  </React.Fragment>
+              }
+
               <MenuItem onClick={this.catalogView}>Collection Index</MenuItem>
               {
                 currMode.includes('replay') &&
@@ -139,7 +161,7 @@ class RecordingToolsUI extends PureComponent {
                   </MenuItem>
               }
               <MenuItem divider />
-              <MenuItem onClick={this.userGuide}>Help</MenuItem>
+              <MenuItem href="https://guide.webrecorder.io/" target="_blank">Help</MenuItem>
             </DropdownButton>
         }
         {

@@ -11,8 +11,8 @@ import { batchActions } from 'redux-batched-actions';
 import { defaultListDesc, untitledEntry } from 'config';
 import { getListLink, remoteBrowserMod } from 'helpers/utils';
 
-import { setBookmarkId, updateUrlAndTimestamp } from 'redux/modules/controls';
-import { setBrowser } from 'redux/modules/remoteBrowsers';
+import { setBookmarkId, updateUrlAndTimestamp } from 'store/modules/controls';
+import { setBrowser } from 'store/modules/remoteBrowsers';
 
 import InlineEditor from 'components/InlineEditor';
 import SidebarHeader from 'components/SidebarHeader';
@@ -26,8 +26,7 @@ import './style.scss';
 
 class SidebarListViewer extends Component {
   static contextTypes = {
-    canAdmin: PropTypes.bool,
-    router: PropTypes.object,
+    canAdmin: PropTypes.bool
   }
 
   static propTypes = {
@@ -153,10 +152,8 @@ class SidebarListViewer extends Component {
 
     return (
       <div className="bookmark-list">
-        <SidebarHeader label="Collection Navigator" />
         <nav>
-          <button onClick={this.returnToCollection} className="borderless">&larr; all lists</button>
-          <Link to={getListLink(collection, list)}>Collection Index <CatalogIcon /></Link>
+          <button onClick={this.returnToCollection} className="borderless" type="button">&larr; all lists</button>
         </nav>
         <header className="list-header">
           <h4>
@@ -170,14 +167,6 @@ class SidebarListViewer extends Component {
               <span>{list.get('title')}</span>
             </InlineEditor>
           </h4>
-          <Truncate height={75} className="description" propPass="clickToEdit">
-            <WYSIWYG
-              key={list.get('id')}
-              initial={list.get('desc')}
-              onSave={this.editListDesc}
-              placeholder={defaultListDesc}
-              success={listEdited} />
-          </Truncate>
         </header>
         <div className="bookmarks">
           <AutoSizer>

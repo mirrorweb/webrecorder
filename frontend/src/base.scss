@@ -7,8 +7,6 @@ html {
 html, body {
   margin: 0;
   padding: 0;
-  font-family: $font-family-sans-serif;
-  background-color: $white;
 }
 
 body {
@@ -40,7 +38,7 @@ a {
 }
 
 .alert {
-  margin-top: 1.5rem;
+  margin-top: 2.5rem;
 }
 
 .caret {
@@ -91,6 +89,10 @@ a {
     border-color: #E0E3E3;
     box-shadow: 0 0 .5rem #E0E3E3;
   }
+}
+
+.react-tabs__tab:first-of-type {
+    margin-left: 1rem;
 }
 
 /*
@@ -194,12 +196,6 @@ a {
   &.direction-override {
     flex-direction: row;
   }
-}
-
-.no-shadow {
-  box-shadow: none;
-  border: 0 solid $gray400;
-  border-width: 0 0 0.1rem 0;
 }
 
 .button-link {

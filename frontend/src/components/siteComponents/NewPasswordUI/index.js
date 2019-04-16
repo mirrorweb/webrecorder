@@ -2,11 +2,11 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import querystring from 'querystring';
-import { Alert, Button, ControlLabel, Form, HelpBlock,
-         FormControl, FormGroup } from 'react-bootstrap';
+import { Alert, Button, ControlLabel, Form, HelpBlock, FormControl, FormGroup } from 'react-bootstrap';
 
 import { product } from 'config';
 import { passwordPassRegex } from 'helpers/utils';
+import { passwordReset as passwordResetErr } from 'helpers/userMessaging';
 
 import './style.scss';
 
@@ -70,8 +70,8 @@ class NewPasswordUI extends Component {
             <Alert bsStyle={errors ? 'danger' : 'success'}>
               {
                 errors ?
-                  <span>{errors}</span> :
-                  <span>Your password has been successfully reset! <button onClick={this.props.toggleLogin} className="button-link">You can now login with your new password.</button></span>
+                  <span>{passwordResetErr[errors.get('error')]}</span> :
+                  <span>Your password has been successfully reset! <button onClick={this.props.toggleLogin} className="button-link" type="button">You can now login with your new password.</button></span>
               }
             </Alert>
         }

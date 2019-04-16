@@ -4,24 +4,24 @@ import classNames from 'classnames';
 import Helmet from 'react-helmet';
 import { asyncConnect } from 'redux-connect';
 import { batchActions } from 'redux-batched-actions';
+import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 
 import { getCollectionLink, remoteBrowserMod, truncate } from 'helpers/utils';
 import config from 'config';
 
-import { getActivePage } from 'redux/selectors';
-import { isLoaded, load as loadColl } from 'redux/modules/collection';
-import { getArchives, setBookmarkId, setList, updateUrl, updateUrlAndTimestamp } from 'redux/modules/controls';
-import { resetStats } from 'redux/modules/infoStats';
-import { listLoaded, load as loadList } from 'redux/modules/list';
-import { load as loadBrowsers, isLoaded as isRBLoaded, setBrowser } from 'redux/modules/remoteBrowsers';
-import { toggle as toggleSidebar } from 'redux/modules/sidebar';
+import { getActivePage } from 'store/selectors';
+import { isLoaded, load as loadColl } from 'store/modules/collection';
+import { getArchives, setBookmarkId, setList, updateUrl, updateUrlAndTimestamp } from 'store/modules/controls';
+import { resetStats } from 'store/modules/infoStats';
+import { listLoaded, load as loadList } from 'store/modules/list';
+import { load as loadBrowsers, isLoaded as isRBLoaded, setBrowser } from 'store/modules/remoteBrowsers';
+import { toggle as toggleSidebar } from 'store/modules/sidebar';
 
 import EmbedFooter from 'components/EmbedFooter';
 import HttpStatus from 'components/HttpStatus';
 import RedirectWithStatus from 'components/RedirectWithStatus';
 import Resizable from 'components/Resizable';
-import { InspectorPanel, RemoteBrowser, Sidebar, SidebarListViewer,
-         SidebarCollectionViewer, SidebarPageViewer } from 'containers';
+import { InspectorPanel, RemoteBrowser, Sidebar, SidebarListViewer, SidebarCollectionViewer, SidebarPageViewer } from 'containers';
 import { IFrame, ReplayUI } from 'components/controls';
 
 
@@ -67,7 +67,7 @@ class Replay extends Component {
 
     // TODO: unify replay and replay-coll
     this.mode = 'replay-coll';
-    this.state = { collectionNav: false };
+    this.state = { collectionNav: !props.match.params.listSlug };
   }
 
   getChildContext() {
@@ -119,8 +119,20 @@ class Replay extends Component {
   }
 
   render() {
-    const { activeBookmarkId, activeBrowser, appSettings, collection,
-            dispatch, list, match: { params }, recording, timestamp, url } = this.props;
+    const { isEmbed, isMobile } = this.context;
+    const {
+      activeBookmarkId,
+      activeBrowser,
+      appSettings,
+      auth,
+      collection,
+      dispatch,
+      list,
+      match: { params },
+      recording,
+      timestamp,
+      url
+    } = this.props;
 
     // coll access
     if (collection.get('error')) {
@@ -132,7 +144,7 @@ class Replay extends Component {
     } else if (collection.get('loaded') && !collection.get('slug_matched') && params.coll !== collection.get('slug')) {
       return (
         <RedirectWithStatus
-          to={`${getCollectionLink(collection)}/${remoteBrowserMod(activeBrowser, timestamp)}/${url}`}
+          to={`${isEmbed ? `/${params.embed}` : ''}${getCollectionLink(collection)}/${remoteBrowserMod(activeBrowser, timestamp)}/${url}`}
           status={301} />
       );
     }
@@ -142,7 +154,7 @@ class Replay extends Component {
       if (list.get('loaded') && !list.get('slug_matched')) {
         return (
           <RedirectWithStatus
-            to={`${getCollectionLink(collection)}/list/${list.get('slug')}/b${activeBookmarkId}/${timestamp}/${url}`}
+            to={`${isEmbed ? `/${params.embed}` : ''}${getCollectionLink(collection)}/list/${list.get('slug')}/b${activeBookmarkId}/${timestamp}/${url}`}
             status={301} />
         );
       }
@@ -156,8 +168,9 @@ class Replay extends Component {
       );
     }
 
+    const canAdmin = auth.getIn(['user', 'username']) === params.user;
     const tsMod = remoteBrowserMod(activeBrowser, timestamp);
-    const listSlug = params.listSlug;
+    const { listSlug } = params;
     const bkId = params.bookmarkId;
 
     const shareUrl = listSlug ?
@@ -167,10 +180,6 @@ class Replay extends Component {
     if (!collection.get('loaded')) {
       return null;
     }
-
-    const navigator = listSlug ?
-      <SidebarListViewer showNavigator={this.showCollectionNav} /> :
-      <SidebarPageViewer showNavigator={this.showCollectionNav} />;
 
     const title = listSlug ? `Archived page from the “${list.get('title')}” List on ${config.product}` : `Archived page from the “${collection.get('title')}” Collection on ${config.product}`;
     const desc = listSlug ?
@@ -187,7 +196,7 @@ class Replay extends Component {
           {desc}
         </Helmet>
         {
-          !this.context.isEmbed &&
+          !isEmbed &&
             <ReplayUI
               activeBrowser={activeBrowser}
               params={params}
@@ -196,18 +205,32 @@ class Replay extends Component {
               toggle={this.props.toggleSidebar}
               url={url} />
         }
-        <div className={classNames('iframe-container', { embed: this.context.isEmbed && params.embed !== '_embed_noborder' })}>
+        <div className={classNames('iframe-container', { embed: isEmbed && params.embed !== '_embed_noborder' })}>
           {
-            !this.context.isMobile && !this.context.isEmbed &&
+            !isMobile && !isEmbed &&
               <Sidebar defaultExpanded={Boolean(listSlug) || __PLAYER__} storageKey={listSlug ? 'listReplaySidebar' : 'pageReplaySidebar'}>
                 <Resizable axis="y" minHeight={200} storageKey="replayNavigator">
-                  {
-                    this.state.collectionNav ?
-                      (<SidebarCollectionViewer
-                        activeList={listSlug}
-                        showNavigator={this.showCollectionNav} />) :
-                      navigator
-                  }
+                  <Tabs defaultIndex={listSlug ? 0 : 1}>
+                    <TabList>
+                      <Tab>Lists</Tab>
+                      {
+                        (collection.get('public_index') || canAdmin) &&
+                          <Tab>Browse All</Tab>
+                      }
+                    </TabList>
+                    <TabPanel>
+                      {
+                        this.state.collectionNav ?
+                          (<SidebarCollectionViewer
+                            activeList={listSlug}
+                            showNavigator={this.showCollectionNav} />) :
+                          <SidebarListViewer showNavigator={this.showCollectionNav} />
+                      }
+                    </TabPanel>
+                    <TabPanel>
+                      <SidebarPageViewer showNavigator={this.showCollectionNav} />
+                    </TabPanel>
+                  </Tabs>
                 </Resizable>
                 <InspectorPanel />
               </Sidebar>
@@ -226,7 +249,7 @@ class Replay extends Component {
           }
           {
 
-            this.context.isEmbed && params.embed !== '_embed_noborder' &&
+            isEmbed && params.embed !== '_embed_noborder' &&
               <EmbedFooter timestamp={timestamp} />
           }
           {

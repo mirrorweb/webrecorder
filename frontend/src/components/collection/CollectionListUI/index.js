@@ -12,7 +12,7 @@ import RedirectWithStatus from 'components/RedirectWithStatus';
 import WYSIWYG from 'components/WYSIWYG';
 import { NewCollection } from 'components/siteComponents';
 import { Upload } from 'containers';
-import { UploadIcon, LinkIcon } from 'components/icons';
+import { LinkIcon, UploadIcon, UserIcon } from 'components/icons';
 
 import CollectionItem from './CollectionItem';
 import './style.scss';
@@ -44,9 +44,7 @@ class CollectionListUI extends Component {
     super(props);
 
     this.state = {
-      showModal: false,
-      isPublic: false,
-      collTitle: 'New Collection',
+      showModal: false
     };
   }
 
@@ -98,7 +96,7 @@ class CollectionListUI extends Component {
     }
 
     if (collections.get('loaded') && isAnon && canAdmin) {
-      return <RedirectWithStatus to={`/${auth.getIn(['user', 'username'])}/temp/index`} status={301} />;
+      return <RedirectWithStatus to={`/${auth.getIn(['user', 'username'])}/temp/manage`} status={301} />;
     }
 
     return (
@@ -116,13 +114,13 @@ class CollectionListUI extends Component {
               success={this.props.edited}>
               <h2>{displayName}</h2>
             </InlineEditor>
-            <p className="collection-username">{ userParam }</p>
+            <p className="collection-username"><span className="glyphicon glyphicon-user right-buffer-sm" />{ userParam }</p>
             {
               (user.get('display_url') || canAdmin) &&
                 <InlineEditor
                   canAdmin={canAdmin}
                   initial={user.get('display_url') || 'Add website...'}
-                  placeholder={'Add website...'}
+                  placeholder="Add website..."
                   onSave={this.editURL}
                   readOnly={isAnon || !canAdmin}
                   success={this.props.edited}>
@@ -137,7 +135,7 @@ class CollectionListUI extends Component {
               key={user.get('id')}
               initial={user.get('desc') || ''}
               onSave={this.updateUser}
-              placeholder={'Add a description...'}
+              placeholder="Add a description..."
               clickToEdit
               readOnly={isAnon || !canAdmin}
               success={this.props.edited} />

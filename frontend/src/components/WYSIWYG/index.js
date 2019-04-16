@@ -4,7 +4,9 @@ import classNames from 'classnames';
 import RichTextEditor, { createValueFromString } from 'react-rte/lib/RichTextEditor';
 import ButtonGroup from 'react-rte/lib/ui/ButtonGroup';
 import IconButton from 'react-rte/lib/ui/IconButton';
-import { Button } from 'react-bootstrap';
+import remark from 'remark';
+import remark2react from 'remark-react';
+import { Button } from 'react-bootstrap'
 
 import { PencilIcon, XIcon } from 'components/icons';
 
@@ -12,7 +14,6 @@ import './style.scss';
 
 
 class WYSIWYG extends Component {
-
   static contextTypes = {
     canAdmin: PropTypes.bool
   };
@@ -40,6 +41,7 @@ class WYSIWYG extends Component {
     externalEditButton: false,
     initial: '',
     minimal: true,
+    placeholder: '',
     readOnly: false
   };
 
@@ -80,7 +82,7 @@ class WYSIWYG extends Component {
 
     this.state = {
       renderable: false,
-      editorState: createValueFromString(this.getText(), this.method),
+      editorState: !props.readOnly && createValueFromString(this.getText(), this.method),
       markdownEdit: false,
       localEditMode: false
     };
@@ -105,6 +107,12 @@ class WYSIWYG extends Component {
       }
 
       const text = nextProps.readOnly ? nextProps.initial : nextProps.initial || nextProps.placeholder;
+      this.setState({ editorState: createValueFromString(text, this.method) });
+    }
+
+    // readOnly state changed
+    if (this.props.readOnly && !nextProps.readOnly) {
+      const text = nextProps.initial || nextProps.placeholder;
       this.setState({ editorState: createValueFromString(text, this.method) });
     }
   }
@@ -216,8 +224,19 @@ class WYSIWYG extends Component {
     const { className, clickToEdit, contentSync, editMode, externalEditButton, readOnly } = this.props;
     const { editorState, localEditMode, renderable } = this.state;
     const canAdmin = typeof this.context.canAdmin !== 'undefined' ? this.context.canAdmin : true;
-
     const _editMode = externalEditButton ? editMode : localEditMode;
+
+    if (readOnly || !canAdmin) {
+      return (
+        <div className="wr-editor-readonly">
+          {
+            remark()
+              .use(remark2react)
+              .processSync(this.props.initial).contents
+          }
+        </div>
+      );
+    }
 
     return (
       <div
@@ -248,8 +267,8 @@ class WYSIWYG extends Component {
         {
           _editMode && !contentSync &&
             <div className="editor-button-row">
-              <Button onClick={this.cancel} className="rounded">Cancel</Button>
-              <Button bsStyle={this.props.success ? 'success' : 'default'} className="rounded" onClick={this.save}>
+              <Button onClick={this.cancel} className="rounded" type="button">Cancel</Button>
+              <Button bsStyle={this.props.success ? 'success' : 'default'} className="rounded" onClick={this.save} type="button">
                 { this.props.success ? 'Saved..' : 'Save' }
               </Button>
             </div>
@@ -257,7 +276,7 @@ class WYSIWYG extends Component {
         {
           _editMode && this.state.markdownEdit &&
             <React.Fragment>
-              <button onClick={this.toggleMarkdownMode} className="close-markdown borderless">
+              <button onClick={this.toggleMarkdownMode} className="close-markdown borderless" type="button">
                 <XIcon />
               </button>
               <textarea

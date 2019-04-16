@@ -12,6 +12,7 @@ import {
   CollectionManagement,
   Extract,
   Home,
+  ListDetail,
   Logout,
   NewPassword,
   NewRecording,
@@ -50,19 +51,19 @@ const userRoutes = [
     classOverride: '',
     component: CollectionCover,
     exact: true,
-    footer: true,
+    footer: false,
     getLocation: ({ user, coll }) => {
       return `/${user}/${coll}`;
     },
     name: 'collectionCover'
   },
   {
-    path: `${userPath}/:coll/index`,
-    breadcrumb: 'Collection Index',
+    path: `${userPath}/:coll/manage`,
     classOverride: 'direction-override',
     component: CollectionDetail,
     exact: true,
     footer: false,
+    managementView: true,
     name: 'collectionPages'
   },
   {
@@ -72,19 +73,28 @@ const userRoutes = [
     component: CollectionManagement,
     exact: true,
     footer: true,
+    managementView: false,
     name: 'collectionMgmt'
   },
   {
     path: `${userPath}/:coll/list/:list`,
     breadcrumb: listDetailBreadcrumb,
-    classOverride: 'direction-override',
-    component: CollectionDetail,
+    component: ListDetail,
     exact: true,
     footer: false,
     getLocation: ({ user, coll, list }) => {
       return `/${user}/${coll}/list/${list}`;
     },
     name: 'collectionDetailList'
+  },
+  {
+    path: `${userPath}/:coll/list/:list/manage`,
+    classOverride: 'direction-override',
+    component: CollectionDetail,
+    exact: true,
+    footer: false,
+    managementView: true,
+    name: 'collectionDetailListManager'
   }
 ];
 
@@ -106,7 +116,7 @@ const controllerRoutes = [
     component: Record,
     exact: true,
     footer: false,
-    getLocation: ({ user, coll, rec }) => `/${user}/${coll}?filter=${rec}`,
+    getLocation: ({ user, coll, rec }) => `/${user}/${coll}/manage?filter=${rec}`,
     name: 'rb record'
   },
   {
@@ -116,7 +126,7 @@ const controllerRoutes = [
     component: Record,
     exact: true,
     footer: false,
-    getLocation: ({ user, coll, rec }) => `/${user}/${coll}/index?filter=${rec}`,
+    getLocation: ({ user, coll, rec }) => `/${user}/${coll}/manage?filter=${rec}`,
     name: 'record'
   },
   {
@@ -248,7 +258,6 @@ export default [
   /* core */
   {
     path: '/',
-    breadcrumb: 'Webrecorder',
     component: Home,
     exact: true,
     footer: true
@@ -296,7 +305,7 @@ export default [
 
   ...infoRoutes,
   ...userRoutes,
-  ...controllerRoutes.map(o => ({ ...o, noShadow: true })),
+  ...controllerRoutes,
 
   {
     path: '/(.*)',

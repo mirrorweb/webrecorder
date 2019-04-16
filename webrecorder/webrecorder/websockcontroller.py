@@ -69,14 +69,15 @@ class WebsockController(BaseController):
                        status_update_secs=self.status_update_secs).run()
 
     def client_ws_cont(self):
-        info = self.browser_mgr.init_cont_browser_sesh()
+        info = self.browser_mgr.init_remote_browser_session()
         if not info:
             return {'error_message': 'conn not from valid containerized browser'}
 
         user = info['user']
         coll = info['coll']
         rec = info['rec']
-        coll_name = info['coll_name']
+        rec_name = info.get('rec_name', '')
+        coll_name = info.get('coll_name', '')
 
         user = self.user_manager.all_users.make_user(user)
         collection = user.get_collection_by_id(coll, coll_name)
@@ -252,7 +253,7 @@ class BaseWebSockHandler(object):
                 self._publish(to_browser, msg)
 
         elif from_browser:
-            if msg['ws_type'] in ('remote_url', 'patch_req', 'snapshot'):
+            if msg['ws_type'] in ('remote_url', 'patch_req', 'autoscroll_resp', 'snapshot'):
                 self._publish(from_browser, msg)
 
     def get_status(self):

@@ -11,25 +11,27 @@ import base64
 
 
 # ============================================================================
-def init_logging():
-    logging.basicConfig(format='%(asctime)s: [%(levelname)s]: %(message)s',
+def init_logging(debug=False):
+    logging.basicConfig(format='%(name)s: %(asctime)s: [%(levelname)s]: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
-                        level=logging.WARNING)
-
-    # set boto log to error
-    boto_log = logging.getLogger('boto')
-    if boto_log:
-        boto_log.setLevel(logging.ERROR)
-
-    tld_log = logging.getLogger('tldextract')
-    if tld_log:
-        tld_log.setLevel(logging.ERROR)
+                        level=logging.WARNING if not debug else logging.DEBUG)
 
     try:
         from requests.packages.urllib3 import disable_warnings
         disable_warnings()
     except:
         pass
+
+    ERROR_ONLY_LOGGERS = (
+        'boto3', 'botocore', 's3transfer', 'tldextract',
+        'requests', 'urllib3.connectionpool', 'urllib3.util.retry',
+    )
+
+    # set boto log to error
+    import boto3
+    import requests
+    for logger_name in ERROR_ONLY_LOGGERS:
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
 
 
 # ============================================================================
@@ -43,11 +45,12 @@ def load_wr_config():
 
 # ============================================================================
 def init_props(config):
-    from webrecorder.models import User, Collection, Recording, Stats
+    from webrecorder.models import User, Collection, Recording, Stats, Auto
     User.init_props(config)
     Collection.init_props(config)
     Recording.init_props(config)
     Stats.init_props(config)
+    Auto.init_props(config)
 
     import webrecorder.rec.storage.storagepaths as storagepaths
     storagepaths.init_props(config)
@@ -118,8 +121,8 @@ def spawn_once(*args, **kwargs):
 
 # ============================================================================
 @contextmanager
-def redis_pipeline(redis_obj):
-    p = redis_obj.pipeline(transaction=False)
+def redis_pipeline(redis_obj, transaction=False):
+    p = redis_obj.pipeline(transaction=transaction)
     yield p
     p.execute()
 

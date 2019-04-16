@@ -2,10 +2,10 @@ import React, { Component } from 'react';
 import classNames from 'classnames';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { Alert, Button, Checkbox, ControlLabel, Form,
-         HelpBlock, FormControl, FormGroup } from 'react-bootstrap';
+import { Alert, Button, Checkbox, ControlLabel, Form, HelpBlock, FormControl, FormGroup } from 'react-bootstrap';
 
 import { product, userRegex } from 'config';
+import { registration as registrationErr } from 'helpers/userMessaging';
 
 import { passwordPassRegex } from 'helpers/utils';
 import { TempUsage } from 'containers';
@@ -133,12 +133,14 @@ class UserSignup extends Component {
 
     if (username && username.length > 1) {
       // check if valid username formatting
-      if (!this.userPassRegex(username))
+      if (!this.userPassRegex(username)) {
         return 'error';
+      }
 
       // check if already exists
-      if (userCheck && username === checkedUsername && !available)
+      if (userCheck && username === checkedUsername && !available) {
         return 'error';
+      }
 
       return 'success';
     } else if (userIsRequired) {
@@ -177,10 +179,25 @@ class UserSignup extends Component {
   }
 
   render() {
-    const { available, checkedUsername, errors, result,
-            submitting, success, user, userCheck } = this.props;
-    const { email, moveTemp, name, password, confirmpassword,
-            toColl, username } = this.state;
+    const {
+      available,
+      checkedUsername,
+      errors,
+      result,
+      submitting,
+      success,
+      user,
+      userCheck
+    } = this.props;
+    const {
+      email,
+      moveTemp,
+      name,
+      password,
+      confirmpassword,
+      toColl,
+      username
+    } = this.state;
 
     const classes = classNames('col-sm-6 col-md-6 col-md-offset-3 wr-signup', {
       success
@@ -199,7 +216,7 @@ class UserSignup extends Component {
                     <b>Errors:</b>
                     <ul>
                       {
-                        errors.entrySeq().toArray().map(error => <li key={error[0]}>{`Error ${error[0]}:`} <span dangerouslySetInnerHTML={{ __html: error[1] }} /></li>)
+                        errors.entrySeq().toArray().map(error => <li key={error[0]}>{`${registrationErr[error[1]]}`}</li>)
                       }
                     </ul>
                   </div>

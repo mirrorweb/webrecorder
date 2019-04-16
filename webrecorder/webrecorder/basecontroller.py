@@ -21,6 +21,7 @@ class BaseController(object):
         self.user_manager = kwargs['user_manager']
         self.config = kwargs['config']
         self.redis = kwargs['redis']
+        self.cork = kwargs['cork']
 
         self.api = api_decorator
 
@@ -29,6 +30,8 @@ class BaseController(object):
         self.cache_template = self.config.get('cache_template')
 
         self.anon_disabled = get_bool(os.environ.get('ANON_DISABLED'))
+
+        self.allow_beta_features_role = os.environ.get('ALLOW_BETA_FEATURES_ROLE', 'beta-archivist')
 
         self.init_routes()
 
@@ -137,15 +140,25 @@ class BaseController(object):
         if not coll_name:
             self._raise_error(400, 'no_collection_specified')
 
-        #if self.access.is_anon(user):
-        #    if coll_name != 'temp':
-        #        self._raise_error(404, 'no_such_collection')
-
         collection = user.get_collection_by_name(coll_name)
         if not collection:
             self._raise_error(404, 'no_such_collection')
 
         return user, collection
+
+    def require_admin_beta_access(self, collection=None):
+        """
+        Ensure user has at least beta-archivist privs
+        and is also admin on the collection, if provided
+        """
+        try:
+            if self.allow_beta_features_role:
+                self.cork.require(role=self.allow_beta_features_role)
+
+            if collection:
+                self.access.assert_can_admin_coll(collection)
+        except:
+            self._raise_error(400, 'not_allowed')
 
     def _raise_error(self, code, message='not_found'):
         result = {'error': message}

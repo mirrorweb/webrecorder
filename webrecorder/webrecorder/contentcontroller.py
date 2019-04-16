@@ -5,6 +5,7 @@ import json
 from six.moves.urllib.parse import quote, unquote, urlencode
 
 from bottle import Bottle, request, HTTPError, response, HTTPResponse, redirect
+import requests
 
 from pywb.utils.loaders import load_yaml_config
 from pywb.rewrite.wburl import WbUrl
@@ -53,6 +54,7 @@ class ContentController(BaseController, RewriterApp):
         self.replay_host = os.environ.get('WARCSERVER_PROXY_HOST')
         if not self.replay_host:
             self.replay_host = self.live_host
+        self.session_redirect_host = os.environ.get('SESSION_REDIRECT_HOST')
 
         self.wam_loader = WAMLoader()
         self._init_client_archive_info()
@@ -252,6 +254,7 @@ class ContentController(BaseController, RewriterApp):
             full_url += url
 
             return {'url': full_url,
+                    'user': self.access.session_user.name,
                     'rec_name': rec,
                     'patch_rec_name': patch_rec
                    }
@@ -293,6 +296,10 @@ class ContentController(BaseController, RewriterApp):
                 self.set_options_headers(None, None, res)
 
             return res
+
+        @self.app.route('/api/v1/remote/put-record', method='PUT')
+        def do_put_record():
+            return self.do_put_record()
 
         # LIVE DEBUG
         #@self.app.route('/live/<wb_url:path>', method='ANY')
@@ -447,7 +454,7 @@ class ContentController(BaseController, RewriterApp):
                 self._raise_error(400, 'invalid_request')
 
     def do_proxy(self, url):
-        info = self.browser_mgr.init_cont_browser_sesh()
+        info = self.browser_mgr.init_remote_browser_session()
         if not info:
             return self._raise_error(400, 'invalid_connection_source')
 
@@ -523,6 +530,47 @@ class ContentController(BaseController, RewriterApp):
 
         return mode, new_url
 
+    def do_put_record(self):
+        reqid = request.query.getunicode('reqid')
+        info = self.browser_mgr.init_remote_browser_session(reqid=reqid)
+        if not info:
+            return self._raise_error(400, 'invalid_connection_source')
+
+        user = info['the_user']
+        collection = info['collection']
+        recording = info['recording']
+
+        kwargs = dict(user=user.name,
+                      coll=collection.my_id,
+                      rec=recording.my_id,
+                      type='put_record')
+
+        url = request.query.getunicode('target_uri')
+
+        params = {'url': url}
+
+        upstream_url = self.get_upstream_url('', kwargs, params)
+
+        headers = {'Content-Type': request.environ.get('CONTENT_TYPE', 'text/plain')}
+
+        r = requests.put(upstream_url,
+                         data=request.body,
+                         headers=headers,
+                        )
+        try:
+            res = r.json()
+            if res['success'] != 'true':
+                print(res)
+                return {'error_message': 'put_record_failed'}
+
+            warc_date = res.get('WARC-Date')
+
+        except Exception as e:
+            print(e)
+            return {'error_message': 'put_record_failed'}
+
+        return res
+
     def do_create_new_and_redir(self, coll_name, rec_name, wb_url, mode):
         new_url, _, _2 = self.do_create_new(coll_name, rec_name, wb_url, mode)
         return self.redirect(new_url)
@@ -575,7 +623,7 @@ class ContentController(BaseController, RewriterApp):
     def redir_set_session(self):
         full_path = request.environ['SCRIPT_NAME'] + request.environ['PATH_INFO']
         full_path = self.add_query(full_path)
-        self.redir_host(None, '/_set_session?path=' + quote(full_path))
+        self.redir_host(self.session_redirect_host, '/_set_session?path=' + quote(full_path))
 
     def _create_new_rec(self, collection, title, mode, desc=''):
         #rec_name = self.sanitize_title(title) if title else ''

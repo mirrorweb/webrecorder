@@ -1,0 +1,119 @@
+@import 'src/vars';
+
+.app-header {
+    height: 5.5rem;
+    border: solid 0;
+    border-bottom-width: .1rem;
+    border-color: $gray500;
+
+    .header-webrecorder {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 100%;
+        padding: 0 1.5rem;
+
+        transition: background-color $quickShift ease-in-out;
+        background-color: white;
+
+        .wr-logomark {
+            margin-right: 1.5rem;
+
+            svg {
+                height: 2.3rem;
+                width: 4.8rem;
+                vertical-align: middle;
+            }
+        }
+
+        .navbar-user-links>li>button {
+            color: $gray600;
+        }
+
+        .navbar-user-links>li>a:link,
+        .navbar-user-links>li>a:visited {
+            color: $gray600;
+        }
+
+        .navbar-user-links>li>a:focus,
+        .navbar-user-links>li>a:hover {
+            text-decoration: underline;
+            background-color: inherit;
+            color: $gray600;
+        }
+
+        .navbar-user-links>li>a:active {
+            outline: 0;
+            color: $gray600;
+        }
+
+        .space-usage {
+            white-space: nowrap;
+        }
+    }
+
+
+
+    &.dark {
+        .header-webrecorder {
+            background-color: $body-gray;
+            color: $white;
+
+            .navbar-user-links>li>a:link,
+            .navbar-user-links>li>a:visited {
+                color: $white;
+            }
+
+            .navbar-user-links>li>a:focus,
+            .navbar-user-links>li>a:hover {
+                color: $white;
+            }
+
+            .navbar-user-links>li>a:active {
+                color: $white;
+            }
+
+            .navbar-user-links>li>button {
+                color: $white;
+            }
+
+            .wr-collection-menu .dropdown {
+                li {
+                    a {
+                        &:link, &:visited {
+                            color: $white;
+                        }
+
+                        &:hover {
+                            background-color: $blue;
+                        }
+                    }
+                }
+
+                li:first-child {
+                    a:hover {
+                        background-color: inherit;
+                    }
+                }
+            }
+
+            .wr-breadcrumb li span {
+                color: $white;
+            }
+
+            .navbar-default .navbar-text {
+                color: $white;
+            }
+
+            #user-dropdown {
+                background-color: transparent;
+                color: $white;
+            }
+
+            .display {
+                color: #333;
+            }
+        }
+    }
+
+}

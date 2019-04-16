@@ -17,13 +17,13 @@ function HomepageMessage(props) {
       <div className="col-md-6 col-md-offset-3">
         <div className="panel panel-info">
           <div className="panel-heading">
-            You have a <b><Link to={`/${username}/temp/index`}>Temporary Collection</Link></b> with {recCount} recording{recCount === 1 ? '' : 's'}, expiring in <b><TempUserTimer ttl={user.get('ttl')} accessed={auth.get('accessed')} /></b>
+            You have a <b><Link to={`/${username}/temp/manage`}>Temporary Collection</Link></b> with {recCount} recording{recCount === 1 ? '' : 's'}, expiring in <b><TempUserTimer ttl={user.get('ttl')} accessed={auth.get('accessed')} /></b>
           </div>
           <div className="panel-body">
             <div className="top-buffer-md">
               <ul>
                 <li>
-                  <Link to="/_register"><strong>Sign Up</strong></Link> or <button className="button-link" onClick={showModalCB}>Login</button> to keep your collection and give it a permanent address.
+                  <Link to="/_register"><strong>Sign Up</strong></Link> or <button className="button-link" onClick={showModalCB} type="button">Login</button> to keep your collection and give it a permanent address.
                 </li>
                 <li>
                   Continue capturing by entering another URL below and clicking <b>Start</b>

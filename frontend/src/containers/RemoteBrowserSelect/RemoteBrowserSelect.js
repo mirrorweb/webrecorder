@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { fromJS } from 'immutable';
+import { withRouter } from 'react-router';
 
-import { load, selectBrowser } from 'redux/modules/remoteBrowsers';
+import { load, selectBrowser } from 'store/modules/remoteBrowsers';
 
 import { RemoteBrowserSelectUI } from 'components/controls';
 
@@ -43,7 +44,7 @@ const mapDispatchToProps = (dispatch) => {
   };
 };
 
-export default connect(
+export default withRouter(connect(
   mapStateToProps,
   mapDispatchToProps
-)(RemoteBrowserSelect);
+)(RemoteBrowserSelect));

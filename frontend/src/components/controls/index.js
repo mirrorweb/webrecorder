@@ -8,7 +8,6 @@ export PatchWidgetUI from './PatchWidgetUI';
 export RecordingToolsUI from './RecordingToolsUI';
 export RemoteBrowserOption from './RemoteBrowserOption';
 export RemoteBrowserSelectUI from './RemoteBrowserSelectUI';
-export RecordUI from './RecordUI';
 export RecordURLBar from './RecordURLBar';
 export RemoteBrowserUI from './RemoteBrowserUI';
 export ReplayUI from './ReplayUI';
@@ -20,4 +19,3 @@ export SidebarPageViewerUI from './SidebarPageViewerUI';
 export SidebarUI from './SidebarUI';
 export SizeCounter from './SizeCounter';
 export StandaloneRecorderUI from './StandaloneRecorderUI';
-

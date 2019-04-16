@@ -2,7 +2,7 @@
 
 .wr-breadcrumb {
     background-color: transparent;
-    padding: 0 0 0 .5rem;
+    padding: 0;
     margin: .1rem;
     border: none;
     display: inline-block;
@@ -10,23 +10,18 @@
     li {
         display: inline;
 
-        &:not(:first-child):before {
+        &:not(:first-of-type):before {
             content: '/';
-            color: #CCC;
+            color: $body-gray;
             padding:0 1rem;
         }
 
         a, span {
-            color: #ccc;
+            color: $body-gray;
             max-width: 10rem !important;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-        }
-
-        span {
-            color: $gray600;
-            font-weight: 500;
         }
 
         a:focus, a:hover, a:active {

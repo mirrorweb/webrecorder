@@ -30,6 +30,7 @@ class CollectionHeaderUI extends Component {
 
   static propTypes = {
     auth: PropTypes.object,
+    autoId: PropTypes.string,
     collection: PropTypes.object,
     collEdited: PropTypes.bool,
     collEditing: PropTypes.bool,
@@ -38,6 +39,7 @@ class CollectionHeaderUI extends Component {
     editCollection: PropTypes.func,
     history: PropTypes.object,
     shareToDat: PropTypes.func,
+    stopAutomation: PropTypes.func,
     unshareFromDat: PropTypes.func
   };
 
@@ -79,11 +81,6 @@ class CollectionHeaderUI extends Component {
     unshareFromDat(collection.get('owner'), collection.get('id'));
   }
 
-  howTo = () => {
-    const { history } = this.props;
-    history.push('/_documentation');
-  }
-
   editModal = () => {
     this.setState({ editModal: !this.state.editModal });
   }
@@ -117,6 +114,11 @@ class CollectionHeaderUI extends Component {
     doubleRAF(() => this.setState({ onBoarding: false }));
   }
 
+  stopAutomation = () => {
+    const { autoId, collection } = this.props;
+    this.props.stopAutomation(collection.get('owner'), collection.get('id'), autoId);
+  }
+
   togglePublicView = () => {
     const { collection, history } = this.props;
     history.push(getCollectionLink(collection));
@@ -133,6 +135,8 @@ class CollectionHeaderUI extends Component {
 
     const titleCapped = truncate(collTitle, 9, truncWord);
     const allowDat = JSON.parse(process.env.ALLOW_DAT);
+
+    const newFeatures = canAdmin && ['admin', 'beta-archivist'].includes(this.props.auth.get('role'));
 
     return (
       <header className={containerClasses}>
@@ -172,7 +176,7 @@ class CollectionHeaderUI extends Component {
                     truncate(removeMd(collection.get('desc'), { useImgAltText: false }), 3, truncSentence)
                   }
                 </div> :
-                canAdmin && <button className="button-link" onClick={this.editModal}>+ Add description</button>
+                canAdmin && <button className="button-link" onClick={this.editModal} type="button">+ Add description</button>
             }
           </div>
 
@@ -184,6 +188,21 @@ class CollectionHeaderUI extends Component {
                   <MenuItem onClick={this.newSession}>New Session</MenuItem>
                   <MenuItem divider />
                   <MenuItem onClick={this.togglePublicView}>Cover</MenuItem>
+
+                  {
+                    newFeatures &&
+                      <MenuItem divider />
+                  }
+
+                  {
+                    newFeatures &&
+                      <MenuItem onClick={this.props.toggleAutomationModal}>Automation <sup>beta</sup></MenuItem>
+                  }
+
+                  {
+                    newFeatures && this.props.active &&
+                      <MenuItem onClick={this.stopAutomation}>Stop Automation</MenuItem>
+                  }
                   <MenuItem divider />
                   <MenuItem onClick={this.manageCollection}>Manage Sessions</MenuItem>
                   {
@@ -193,7 +212,7 @@ class CollectionHeaderUI extends Component {
                   <MenuItem onClick={this.downloadCollection}>Download Collection</MenuItem>
                   <DeleteCollection wrapper={MenuItem}>Delete Collection</DeleteCollection>
                   {
-                    allowDat && canAdmin && !isAnon && ['admin', 'beta-archivist'].includes(this.props.auth.get('role') || '') &&
+                    allowDat && canAdmin && !isAnon && newFeatures &&
                       <React.Fragment>
                         <MenuItem divider />
                         <MenuItem onClick={this.toggleDatModal}><p className="menu-label">More Sharing Options</p><DatIcon /> Share via Dat...</MenuItem>
@@ -202,9 +221,9 @@ class CollectionHeaderUI extends Component {
                   <MenuItem divider />
                   {
                     onboardingLink && !this.context.isMobile &&
-                      <MenuItem onClick={this.showOnboarding}>&#127881; Tour New Features</MenuItem>
+                      <MenuItem onClick={this.showOnboarding}><span role="img" aria-label="tada emoji">&#127881;</span> Tour New Features</MenuItem>
                   }
-                  <MenuItem href="https://webrecorder.github.io/webrecorder-user-guide/" target="_blank">Help</MenuItem>
+                  <MenuItem href="https://guide.webrecorder.io/" target="_blank">Help</MenuItem>
                 </DropdownButton>
               </div>
           }

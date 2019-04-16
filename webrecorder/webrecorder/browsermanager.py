@@ -13,10 +13,13 @@ import os
 class BrowserManager(object):
     running = True
 
+    BROWSER_IP_KEY = 'up:{0}'
+
     def __init__(self, config, browser_redis, user_manager):
         self.browser_redis = browser_redis
 
         self.browser_req_url = config['browser_req_url']
+        self.browser_info_url = config['browser_info_url']
         self.browser_list_url = config['browser_list_url']
         self.browsers = {}
 
@@ -45,22 +48,31 @@ class BrowserManager(object):
             gevent.sleep(300)
             self.load_all_browsers()
 
-    def init_cont_browser_sesh(self):
-        remote_addr = request.environ['REMOTE_ADDR']
+    def init_remote_browser_session(self, reqid=None, remote_ip=None):
+        # init remote browser session by specified request id
+        if reqid:
+            container_data = self._api_reqid_to_user_params(reqid)
 
-        container_data = self.browser_redis.hgetall('ip:' + remote_addr)
+        else:
+            remote_addr = remote_ip or request.environ['REMOTE_ADDR']
+            user_data_key = self.BROWSER_IP_KEY.format(remote_addr)
+            container_data = self.browser_redis.hgetall(user_data_key)
+            container_data['ip'] = remote_addr
 
         if not container_data or 'user' not in container_data:
-            print('Data not found for remote ' + remote_addr)
+            print('Data not found for remote')
             return
 
         username = container_data.get('user')
 
         sesh = self.get_session()
         sesh.set_restricted_user(username)
-        sesh.set_id(self.browser_sesh_id(container_data['reqid']))
 
-        container_data['ip'] = remote_addr
+        sesh_id = self.browser_sesh_id(container_data['reqid'])
+        if sesh_id:
+            sesh.set_id(sesh_id)
+
+        container_data['id'] = sesh_id
 
         the_user = self.user_manager.all_users[username]
 
@@ -77,14 +89,18 @@ class BrowserManager(object):
         return container_data
 
     def update_local_browser(self, data):
-        self.browser_redis.hmset('ip:127.0.0.1', data)
+        self.browser_redis.hmset(self.BROWSER_IP_KEY.format('127.0.0.1'), data)
 
     def browser_sesh_id(self, reqid):
         return 'reqid_' + reqid
 
     def _api_new_browser(self, req_url, container_data):
-        r = requests.post(req_url, data=container_data)
+        r = requests.post(req_url, json=container_data)
         return r.json()
+
+    def _api_reqid_to_user_params(self, reqid):
+        res = requests.get(self.browser_info_url.format(reqid=reqid))
+        return res.json().get('user_params')
 
     def request_new_browser(self, container_data):
         browser_id = container_data['browser']
@@ -122,11 +138,11 @@ class BrowserManager(object):
                               type_=None,
                               coll=None, rec=None):
 
-        ip = self.browser_redis.hget('req:' + reqid, 'ip')
+        ip = self.get_ip_for_reqid(reqid)
         if not ip:
             return {'error_message': 'No Container Found'}
 
-        container_data = self.browser_redis.hgetall('ip:' + ip)
+        container_data = self.browser_redis.hgetall(self.BROWSER_IP_KEY.format(ip))
 
         if not container_data:
             return {'error_message': 'Invalid Container'}
@@ -153,9 +169,13 @@ class BrowserManager(object):
         except:
             return {'error_message': 'Not a writable browser'}
 
-        self.browser_redis.hmset('ip:' + ip, container_data)
+        self.browser_redis.hmset(self.BROWSER_IP_KEY.format(ip), container_data)
 
         return {}
+
+    def get_ip_for_reqid(self, reqid):
+        ip = self.browser_redis.hget('req:' + reqid, 'ip')
+        return ip
 
     def get_session(self):
         return request.environ['webrec.session']

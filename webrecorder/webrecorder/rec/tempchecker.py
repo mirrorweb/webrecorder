@@ -6,8 +6,11 @@ import requests
 import shutil
 import time
 
-from webrecorder.models import User
+from webrecorder.models import User, Collection
 from webrecorder.models.base import BaseAccess
+
+import logging
+logger = logging.getLogger('wr.io')
 
 
 # ============================================================================
@@ -36,7 +39,7 @@ class TempChecker(object):
 
         self.sesh_key_template = config['session.key_template']
 
-        print('Dir Checker Root: ' + self.record_root_dir)
+        logger.info('Temp Check Root: ' + self.record_root_dir)
 
     def delete_if_expired(self, temp_user, temp_dir):
         temp_key = 't:' + temp_user
@@ -45,19 +48,19 @@ class TempChecker(object):
         if sesh == 'commit-wait':
             try:
                 if not os.path.isdir(temp_dir):
-                    print('Remove Session For Already Deleted Dir: ' + temp_dir)
+                    logger.debug('TempChecker: Remove Session For Already Deleted Dir: ' + temp_dir)
                     self.sesh_redis.delete(temp_key)
                     return True
 
-                print('Removing if empty: ' + temp_dir)
+                logger.debug('TempChecker: Removing if empty: ' + temp_dir)
                 os.rmdir(temp_dir)
                 #shutil.rmtree(temp_dir)
-                print('Deleted empty dir: ' + temp_dir)
+                logger.debug('TempChecker: Deleted empty dir: ' + temp_dir)
 
                 self.sesh_redis.delete(temp_key)
 
             except Exception as e:
-                print('Waiting for commit')
+                logger.debug('TempChecker: Waiting for commit')
                 return False
 
         # temp user key exists
@@ -68,11 +71,23 @@ class TempChecker(object):
                 return False
 
             # delete user
-            print('Deleting expired user: ' + temp_user)
+            logger.debug('TempChecker: Deleting expired user: ' + temp_user)
 
             user = User(my_id=temp_user,
                         redis=self.data_redis,
                         access=BaseAccess())
+
+            wait_to_delete = False
+
+            for collection in user.get_collections(load=False):
+                for recording in collection.get_recordings(load=False):
+                    if recording.is_open(extend=False):
+                        recording.set_closed()
+                        logger.debug('TempChecker: Closing temp recording: ' + recording.my_id)
+                        wait_to_delete = True
+
+            if wait_to_delete:
+                return False
 
             user.delete_me()
 
@@ -84,10 +99,10 @@ class TempChecker(object):
         # no user session, remove temp dir and everything in it
         else:
             try:
-                print('Deleted expired temp dir: ' + temp_dir)
+                logger.debug('TempChecker: Deleted expired temp dir: ' + temp_dir)
                 shutil.rmtree(temp_dir)
             except Exception as e:
-                print(e)
+                logger.warn(str(e))
                 return False
 
         return True
@@ -99,14 +114,12 @@ class TempChecker(object):
                 return False
 
             os.rmdir(warc_dir)
-            print('Removed Empty User Dir: ' + warc_dir)
+            logger.debug('TempChecker: Removed Empty User Dir: ' + warc_dir)
             return True
         except Exception as e:
             return False
 
     def __call__(self):
-        print('Temp Dir Check')
-
         temps_to_remove = set()
 
         # check all warc dirs
@@ -139,9 +152,37 @@ class TempChecker(object):
             if temp_user not in temps_to_remove:
                 temps_to_remove.add((temp_user, os.path.join(self.record_root_dir, temp_user)))
 
+        logger.debug('TempChecker: Temp Users to Remove: {0}'.format(len(temps_to_remove)))
+
         # remove if expired
         for temp_user, temp_dir in temps_to_remove:
             self.delete_if_expired(temp_user, temp_dir)
+
+        self.delete_expired_external()
+
+    def delete_expired_external(self):
+        """ Delete any expired external collections in non-temp users
+        """
+        all_ext_templ = Collection.EXTERNAL_KEY.format(coll='*')
+
+        for ext_key in self.data_redis.scan_iter(all_ext_templ):
+            try:
+                _, coll, _2 = ext_key.split(':', 2)
+
+                collection = Collection(my_id=coll,
+                                        redis=self.data_redis,
+                                        access=BaseAccess())
+
+                user = collection.get_owner()
+                if not user or user.is_anon():
+                    continue
+
+                if not collection.has_cdxj():
+                    logger.debug('TempChecker: Delete Expired External Coll: ' + collection.name)
+                    user.remove_collection(collection, delete=True)
+            except Exception:
+                import traceback
+                traceback.print_exc()
 
 
 # =============================================================================

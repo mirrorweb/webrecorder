@@ -54,11 +54,20 @@ a.collection-title:hover {
         font-size: 1.8rem;
         color: $gray550;
         margin: 0 auto;
+
+        .glyphicon {
+            font-size: 1.1rem;
+        }
     }
 
     .wr-editor {
         color: $gray550;
         max-width: 35rem;
+        word-break: break-word;
+
+        &:not(.click-to-edit) > div {
+            width: 100%;
+        }
 
         * {
             max-width: 35rem;
@@ -67,11 +76,21 @@ a.collection-title:hover {
         .public-DraftEditor-content {
             font-size: 1.2rem;
         }
+
+        .DraftEditor-editorContainer {
+            max-height: inherit;
+        }
+    }
+
+    .wr-editor-readonly {
+        width: 100%;
+        word-break: break-word;
     }
 
     .wr-inline-editor {
         line-height: 1;
         color: $gray550;
+        width: 100%;
 
         .glyphicon {
             color: $gray500;
@@ -104,6 +123,7 @@ a.collection-title:hover {
         font-weight: normal;
         margin-bottom: 0;
         font-size: 3.4rem;
+        word-break: break-word;
     }
 }
 
@@ -154,6 +174,7 @@ a.collection-title:hover {
             padding: 0.6rem 2rem;
             color: $gray550;
             text-decoration: none;
+            background: $white;
         }
 
         .rounded + .rounded {
