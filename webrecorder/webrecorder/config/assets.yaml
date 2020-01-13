@@ -131,21 +131,17 @@ bundles:
             - pkg://pywb/static/wombat.js
             - pkg://pywb/static/vidrw.js
             - wrscripts.js
+            #- embedMiniBehavior.js
 
-    ww_rw-js:
-        output: bundle/ww_rw.js
+    wombatWorkers-js:
+        output: bundle/wombatWorkers.js
         contents:
-            - pkg://pywb/static/ww_rw.js
+            - pkg://pywb/static/wombatWorkers.js
 
     autoFetchWorker-js:
         output: bundle/autoFetchWorker.js
         contents:
             - pkg://pywb/static/autoFetchWorker.js
-
-    autoFetchWorkerProxyMode-js:
-        output: bundle/autoFetchWorkerProxyMode.js
-        contents:
-            - pkg://pywb/static/autoFetchWorkerProxyMode.js
 
     proxy-js:
         output: bundle/proxy.js
@@ -153,6 +149,7 @@ bundles:
             - pkg://pywb/static/wombatProxyMode.js
             - wrscripts.js
             - ws.js
+            #- embedMiniBehavior.js
 
     browser-js:
         output: bundle/browser.js

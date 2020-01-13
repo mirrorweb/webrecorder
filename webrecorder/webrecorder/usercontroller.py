@@ -30,7 +30,8 @@ class UserController(BaseController):
         else:
             user = self.access.session_user
 
-        return {'user': user.serialize(include_colls=include_colls)}
+        return {'user': user.serialize(include_colls=include_colls),
+                'is_new': self.get_session().is_new()}
 
     def new_auth(self):
         user = self.access.init_session_user(persist=True)
@@ -74,6 +75,7 @@ class UserController(BaseController):
             coll_empty = True
             coll_created = True
         else:
+            collection.reset_cdxj_ttl()
             coll_empty = collection.size == 0
             coll_created = False
 
@@ -324,3 +326,4 @@ class UserController(BaseController):
 
             return result
 
+        wr_api_spec.set_curr_tag(None)

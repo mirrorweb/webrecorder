@@ -11,7 +11,8 @@ from pywb.utils.loaders import load_yaml_config
 from pywb.rewrite.wburl import WbUrl
 from pywb.rewrite.cookies import CookieTracker
 
-from pywb.apps.rewriterapp import RewriterApp, UpstreamException
+from pywb.apps.rewriterapp import RewriterApp
+from pywb.utils.wbexception import WbException
 
 from webrecorder.basecontroller import BaseController, wr_api_spec
 from webrecorder.load.wamloader import WAMLoader
@@ -28,6 +29,8 @@ class ContentController(BaseController, RewriterApp):
     WB_URL_RX = re.compile('(([\d*]*)([a-z]+_|[$][a-z0-9:.-]+)?/)?([a-zA-Z]+:)?//.*')
 
     MODIFY_MODES = ('record', 'patch', 'extract')
+
+    BUNDLE_PREFIX = '/static/bundle/'
 
     def __init__(self, *args, **kwargs):
         BaseController.__init__(self, *args, **kwargs)
@@ -55,6 +58,8 @@ class ContentController(BaseController, RewriterApp):
         if not self.replay_host:
             self.replay_host = self.live_host
         self.session_redirect_host = os.environ.get('SESSION_REDIRECT_HOST')
+
+        self.session_share_origin = os.environ.get('SESSION_SHARE_ORIGIN', '')
 
         self.wam_loader = WAMLoader()
         self._init_client_archive_info()
@@ -181,7 +186,7 @@ class ContentController(BaseController, RewriterApp):
 
                           browser=browser_id,
                           url=url,
-                          request_ts=timestamp,
+                          timestamp=timestamp,
 
                           browser_can_write=browser_can_write)
 
@@ -297,6 +302,8 @@ class ContentController(BaseController, RewriterApp):
 
             return res
 
+        wr_api_spec.set_curr_tag('Add External Records')
+
         @self.app.route('/api/v1/remote/put-record', method='PUT')
         def do_put_record():
             return self.do_put_record()
@@ -403,7 +410,12 @@ class ContentController(BaseController, RewriterApp):
                 return self.redirect(request.query.getunicode('path'))
 
             else:
-                url = request.environ['wsgi.url_scheme'] + '://' + self.content_host
+                redir_url = request.query.getunicode('redir_back')
+                if redir_url and redir_url.startswith(self.session_share_origin):
+                    url = redir_url
+                else:
+                    url = request.environ['wsgi.url_scheme'] + '://' + self.content_host
+
                 self.set_options_headers(self.content_host, self.app_host)
                 response.headers['Cache-Control'] = 'no-cache'
 
@@ -422,7 +434,10 @@ class ContentController(BaseController, RewriterApp):
                     cookie = sesh.get_cookie()
 
                 cookie = quote(cookie)
-                url += '/_set_session?{0}&cookie={1}'.format(request.environ['QUERY_STRING'], cookie)
+                if not redir_url:
+                    url += '/_set_session'
+
+                url += '?{0}&cookie={1}'.format(request.environ['QUERY_STRING'], cookie)
                 redirect(url)
 
         # OPTIONS
@@ -470,9 +485,10 @@ class ContentController(BaseController, RewriterApp):
             url = self.add_query(url)
 
             kwargs['url'] = url
-            wb_url = kwargs.get('request_ts', '') + 'bn_/' + url
+            wb_url = kwargs.get('timestamp', '') + 'bn_/' + url
 
             request.environ['webrec.template_params'] = kwargs
+            request.environ['pywb.static_prefix'] = self.BUNDLE_PREFIX
 
             remote_ip = info.get('remote_ip')
 
@@ -482,6 +498,11 @@ class ContentController(BaseController, RewriterApp):
 
             resp = self.render_content(wb_url, kwargs, request.environ)
 
+            if self.should_force_cache(resp.status_headers):
+                resp.status_headers.headers.append(
+                    ('Cache-Control', 'public, max-age=54000, immutable')
+                )
+
             resp = HTTPResponse(body=resp.body,
                                 status=resp.status_headers.statusline,
                                 headers=resp.status_headers.headers)
@@ -489,9 +510,6 @@ class ContentController(BaseController, RewriterApp):
             return resp
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-
             @self.jinja2_view('content_error.html')
             def handle_error(status_code, err_body, environ):
                 response.status = status_code
@@ -514,6 +532,18 @@ class ContentController(BaseController, RewriterApp):
                 err_body = ''
 
             return handle_error(status_code, err_body, request.environ)
+
+    def should_force_cache(self, status_headers):
+        if not request.environ.get('HTTP_REFERER'):
+            return False
+
+        if not status_headers.statusline.startswith('200'):
+            return False
+
+        if 'no-store' in status_headers.get_header('X-Archive-Orig-Cache-Control', ''):
+            return False
+
+        return True
 
     def check_remote_archive(self, wb_url, mode, wb_url_obj=None):
         wb_url_obj = wb_url_obj or WbUrl(wb_url)
@@ -762,12 +792,15 @@ class ContentController(BaseController, RewriterApp):
         # top-frame replay but through a proxy, redirect to original
         if is_top_frame and 'wsgiprox.proxy_host' in request.environ:
             kwargs['url'] = wb_url_obj.url
-            kwargs['request_ts'] = wb_url_obj.timestamp
+            kwargs['timestamp'] = wb_url_obj.timestamp
             self.browser_mgr.update_local_browser(kwargs)
+            response.headers['Cache-Control'] = 'no-cache; no-store; must-revalidate'
             return redirect(wb_url_obj.url)
 
         try:
             self.check_if_content(wb_url_obj, request.environ, is_top_frame)
+
+            request.environ['pywb.static_prefix'] = self.BUNDLE_PREFIX
 
             resp = self.render_content(wb_url, kwargs, request.environ)
 
@@ -780,7 +813,7 @@ class ContentController(BaseController, RewriterApp):
 
             return resp
 
-        except UpstreamException as ue:
+        except WbException as ue:
             err_context = {
                 'url': ue.url,
                 'status': ue.status_code,
@@ -994,6 +1027,23 @@ class ContentController(BaseController, RewriterApp):
         except:
             import traceback
             traceback.print_exc()
+
+    def _add_history_page(self, cdx, kwargs, page_title):
+        if kwargs.get('type') not in self.MODIFY_MODES:
+            return
+
+        collection = kwargs.get('collection')
+        recording = kwargs.get('recording')
+        if not collection or not recording:
+            return
+
+        page_data = {'url': cdx['url'],
+                     'timestamp': cdx['timestamp'],
+                     'title': page_title,
+                     'browser': kwargs.get('browser', ''),
+                    }
+
+        collection.add_page(page_data, recording)
 
     def _add_stats(self, cdx, resp_headers, kwargs, record):
         type_ = kwargs['type']

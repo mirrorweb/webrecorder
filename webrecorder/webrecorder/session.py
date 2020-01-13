@@ -386,7 +386,7 @@ class RedisSessionMiddleware(CookieGuard):
                 data = base64.b64encode(pickle.dumps(session._sesh))
 
                 ttl = session.ttl
-                if ttl < 0:
+                if ttl <= 0:
                     ttl = duration
 
                 pi.setex(session.key, ttl, data)
@@ -395,10 +395,10 @@ class RedisSessionMiddleware(CookieGuard):
                     self.track_long_term(session, pi)
 
                 # set redis duration
-                if not session.is_restricted:
+                if session.curr_role != 'anon':
                     pi.expire(session.key, duration)
 
-        elif set_cookie and not session.is_restricted:
+        elif set_cookie and session.curr_role != 'anon':
             # extend redis duration if extending cookie!
             self.redis.expire(session.key, duration)
 
